@@ -1,96 +1,67 @@
-
-/*
-   LAPACKE Example : Calling DGELS using col-major layout
-   =====================================================
-
-   The program computes the solution to the system of linear
-   equations with a square matrix A and multiple
-   right-hand sides B, where A is the coefficient matrix
-   and b is the right-hand side matrix:
-
-   Description
-   ===========
-
-   In this example, we wish solve the least squares problem min_x || B - Ax ||
-   for two right-hand sides using the LAPACK routine DGELS. For input we will
-   use the 5-by-3 matrix
-
-         ( 1  1  1 )
-         ( 2  3  4 )
-     A = ( 3  5  2 )
-         ( 4  2  5 )
-         ( 5  4  3 )
-    and the 5-by-2 matrix
-
-         ( -10 -3 )
-         (  12 14 )
-     B = (  14 12 )
-         (  16 16 )
-         (  18 16 )
-    We will first store the input matrix as a static C two-dimensional array,
-    which is stored in col-major layout, and let LAPACKE handle the work space
-    array allocation. The LAPACK base name for this function is gels, and we
-    will use double precision (d), so the LAPACKE function name is LAPACKE_dgels.
-
-    lda=5 and ldb=5. The output for each right hand side is stored in b as
-    consecutive vectors of length 3. The correct answer for this problem is
-    the 3-by-2 matrix
-
-         ( 2 1 )
-         ( 1 1 )
-         ( 1 2 )
-
-    A complete C program for this example is given below. Note that when the arrays
-     are passed to the LAPACK routine, they must be dereferenced, since LAPACK is
-      expecting arrays of type double *, not double **.
-
-
-   LAPACKE Interface
-   =================
-
-   LAPACKE_dgels (col-major, high-level) Example Program Results
-
-  -- LAPACKE Example routine (version 3.7.0) --
-  -- LAPACK is a software package provided by Univ. of Tennessee,    --
-  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-     December 2016
-
-*/
-/* Calling DGELS using col-major layout */
-
-/* Includes */
 #include <stdio.h>
-#include <lapacke.h>
-#include "lapacke_example_aux.h"
+#include <stdlib.h>
+#include <cblas.h>
 
-/* Main program */
-int main (int argc, const char * argv[])
+int main ( )
 {
-   /* Locals */
-   double A[5][3] = {{1,2,3},{4,5,1},{3,5,2},{4,1,4},{2,5,3}};
-   double b[5][2] = {{-10,12},{14,16},{18,-3},{14,12},{16,16}};
-   lapack_int info,m,n,lda,ldb,nrhs;
+   CBLAS_LAYOUT Layout;
+   CBLAS_TRANSPOSE transa;
 
-   /* Initialization */
-   m = 5;
-   n = 3;
-   nrhs = 2;
-   lda = 5;
-   ldb = 5;
+   double *a, *x, *y;
+   double alpha, beta;
+   int m, n, lda, incx, incy, i;
 
-   /* Print Entry Matrix */
-   print_matrix_colmajor( "Entry Matrix A", m, n, *A, lda );
-   /* Print Right Rand Side */
-   print_matrix_colmajor( "Right Hand Side b", n, nrhs, *b, ldb );
-   printf( "\n" );
+   Layout = CblasColMajor;
+   transa = CblasNoTrans;
 
-   /* Executable statements */
-   printf( "LAPACKE_dgels (col-major, high-level) Example Program Results\n" );
-   /* Solve least squares problem*/
-   info = LAPACKE_dgels(LAPACK_COL_MAJOR,'N',m,n,nrhs,*A,lda,*b,ldb);
+   m = 4; /* Size of Column ( the number of rows ) */
+   n = 4; /* Size of Row ( the number of columns ) */
+   lda = 4; /* Leading dimension of 5 * 4 matrix is 5 */
+   incx = 1;
+   incy = 1;
+   alpha = 1;
+   beta = 0;
 
-   /* Print Solution */
-   print_matrix_colmajor( "Solution", n, nrhs, *b, ldb );
-   printf( "\n" );
-   exit( info );
-} /* End of LAPACKE_dgels Example */
+   a = (double *)malloc(sizeof(double)*m*n);
+   x = (double *)malloc(sizeof(double)*n);
+   y = (double *)malloc(sizeof(double)*n);
+   /* The elements of the first column */
+   a[0] = 1;
+   a[1] = 2;
+   a[2] = 3;
+   a[3] = 4;
+   /* The elements of the second column */
+   a[m] = 1;
+   a[m+1] = 1;
+   a[m+2] = 1;
+   a[m+3] = 1;
+   /* The elements of the third column */
+   a[m*2] = 3;
+   a[m*2+1] = 4;
+   a[m*2+2] = 5;
+   a[m*2+3] = 6;
+   /* The elements of the fourth column */
+   a[m*3] = 5;
+   a[m*3+1] = 6;
+   a[m*3+2] = 7;
+   a[m*3+3] = 8;
+   /* The elements of x and y */
+   x[0] = 1;
+   x[1] = 2;
+   x[2] = 1;
+   x[3] = 1;
+   y[0] = 0;
+   y[1] = 0;
+   y[2] = 0;
+   y[3] = 0;
+
+   cblas_dgemv( Layout, transa, m, n, alpha, a, lda, x, incx, beta,
+                y, incy );
+   /* Print y */
+   for( i = 0; i < n; i++ )
+      printf(" y%d = %f\n", i, y[i]);
+   free(a);
+   free(x);
+   free(y);
+   return 0;
+}
