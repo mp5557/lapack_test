@@ -7,7 +7,10 @@ SET(CBLAS ON)
 SET(LAPACKE ON)
 ADD_SUBDIRECTORY(lapack)
 
+enable_testing()
+ADD_SUBDIRECTORY(test)
+
 include_directories(${LAPACK_BINARY_DIR}/include)
 
-ADD_EXECUTABLE(foo foo.cc lapacke_example_aux.c)
+ADD_EXECUTABLE(foo foo.cpp lapacke_example_aux.c)
 TARGET_LINK_LIBRARIES(foo lapacke cblas ${BLAS_LIBRARIES})
