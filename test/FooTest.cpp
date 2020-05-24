@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 #include <cblas.h>
+#include <lapacke.h>
 
 TEST(MatrixVectorArithmetic, AddSub) {
   // cblas_dcopy: copy vector
@@ -80,3 +81,84 @@ TEST(MatrixVectorArithmetic, MatrixVecMul) {
               0., y.data(), 1);
   EXPECT_TRUE((a * x - y).isZero());
 }
+
+TEST(LinearAlgebra, LinearEquationSolver) {
+  Eigen::Matrix3f A;
+  Eigen::Vector3f b;
+  A << 1, 2, 3, 4, 5, 6, 7, 8, 10;
+  b << 3, 3, 4;
+
+  Eigen::Matrix3f A_ = A;
+  Eigen::Vector3f x = b;
+  Eigen::Vector3i ipiv;
+  int info = LAPACKE_sgesv(LAPACK_COL_MAJOR, 3, 1, A_.data(), 3, ipiv.data(),
+                           x.data(), 3);
+
+  EXPECT_EQ(info, 0);
+  EXPECT_TRUE((A * x - b).isZero());
+}
+
+TEST(LinearAlgebra, SymmetricEigenSolver) {
+  Eigen::Matrix2f A;
+  A << 1, 2, 2, 3;
+
+  Eigen::Matrix2f vec = A;
+  Eigen::Vector2f eig;
+  int info =
+      LAPACKE_ssyev(LAPACK_COL_MAJOR, 'V', 'U', 2, vec.data(), 2, eig.data());
+  EXPECT_EQ(info, 0);
+  EXPECT_TRUE((A * vec - vec * eig.asDiagonal()).isZero());
+}
+
+TEST(LinearAlgebra, InverseByLU) {
+  Eigen::Matrix3f A;
+  A << 1, 2, 1, 2, 1, 0, -1, 1, 2;
+
+  Eigen::Matrix3f r = A;
+  Eigen::Vector3i ipiv;
+  int info = LAPACKE_sgetrf(LAPACK_COL_MAJOR, 3, 3, r.data(), 3, ipiv.data());
+  EXPECT_EQ(info, 0);
+  info = LAPACKE_sgetri(LAPACK_COL_MAJOR, 3, r.data(), 3, ipiv.data());
+  EXPECT_EQ(info, 0);
+
+  EXPECT_TRUE((A * r - Eigen::Matrix3f::Identity()).isZero());
+}
+
+TEST(LinearAlgebra, DeterminantByLU) {
+  for (int k = 0; k < 100; k++) {
+    Eigen::Matrix3f A = Eigen::Matrix3f::Random();
+
+    Eigen::Matrix3f r = A;
+    Eigen::Vector3i ipiv;
+    int info = LAPACKE_sgetrf(LAPACK_COL_MAJOR, 3, 3, r.data(), 3, ipiv.data());
+    EXPECT_EQ(info, 0);
+
+    int count = 0;
+    for (int i = 0; i < 3; i++)
+      if (ipiv(i) != i + 1)
+        count++;
+
+    float det = count % 2 == 0 ? 1.f : -1.f;
+    for (int i = 0; i < 3; i++)
+      det *= r(i, i);
+
+    EXPECT_TRUE(std::abs(A.determinant() - det) < 1e-5f)
+        << det << ' ' << A.determinant() << '\n'
+        << A;
+  }
+}
+
+/* TEST(LinearAlgebra, RankRevealByQR) { */
+/*   Eigen::Matrix3f A; */
+/*   A << 1, 2, 5, 2, 1, 4, 3, 0, 3; */
+
+/*   Eigen::Matrix3f A_ = A; */
+/*   Eigen::Vector3f tau; */
+/*   Eigen::Vector3i jpvt = Eigen::Vector3i::Zero(); */
+
+/*   int info = LAPACKE_sgeqp3(LAPACK_COL_MAJOR, 3, 3, A_.data(), 3, jpvt.data(), */
+/*                             tau.data()); */
+/*   EXPECT_EQ(info, 0); */
+
+/*   std::cout << "A_\n" << A_ << "\ntau\n" << tau << "\njpvt\n" << jpvt; */
+/* } */
